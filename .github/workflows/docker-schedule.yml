@@ -1,0 +1,22 @@
+name: Run Docker Container Daily
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every day at midnight UTC
+
+jobs:
+  run-docker-container:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      
+      - name: Pull Docker image
+        run: docker pull yourusername/your-image:latest
+      
+      - name: Run Docker container
+        run: docker run --rm yourusername/your-image:latest
