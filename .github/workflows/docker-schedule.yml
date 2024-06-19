@@ -16,7 +16,7 @@ jobs:
         uses: docker/setup-buildx-action@v1
       
       - name: Pull Docker image
-        run: docker pull yourusername/your-image:latest
+        run: docker pull baileydt/broken-link-checker:latest
       
       - name: Run Docker container
-        run: docker run --rm yourusername/your-image:latest
+        run: docker run --rm baileydt/broken-link-checker:latest
