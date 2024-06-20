@@ -22,7 +22,7 @@ jobs:
         run: docker pull baileydt/broken-link-checker:latest
       
       - name: Run Docker container
-        run: docker run --rm -v ${{ github.workspace }}/results:/app/results baileydt/broken-link-checker:latest
+        run: docker run --rm baileydt/broken-link-checker:latest
 
       - name: Find latest results.csv
         id: find-results
