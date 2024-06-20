@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { test } = require('@playwright/test');
 
 //change how long the test should run
@@ -5,6 +6,23 @@ const minutes = 30;
 
 const convertedTime = minutes*60000;
 test.setTimeout(convertedTime);
+
+function getNextFileName(directory, baseName, extension) {
+    const files = fs.readdirSync(directory);
+    let maxNumber = -1;
+
+    files.forEach(file => {
+        const match = file.match(new RegExp(`${baseName}(\\d+)\\.${extension}`));
+        if (match) {
+            const number = parseInt(match[1], 10);
+            if (number > maxNumber) {
+                maxNumber = number;
+            }
+        }
+    });
+
+    return `${baseName}${maxNumber + 1}.${extension}`;
+}
 
 test('Test for broken links', async ({ browser }) => {
     //All websites we want to test
@@ -51,6 +69,13 @@ test('Test for broken links', async ({ browser }) => {
         "https://universalbiosensors.com/",
         "https://vacl.org.au/"
     ]
+    const resultsDir = 'results';
+    if (!fs.existsSync(resultsDir)) {
+        fs.mkdirSync(resultsDir);
+    }
+
+    const csvFileName = getNextFileName(resultsDir, 'results', 'csv');
+    const csvStream = fs.createWriteStream(`${resultsDir}/${csvFileName}`);
 
     //For Each Website
     for (let i = 0; i < startUrl.length; i++) {
@@ -67,16 +92,13 @@ test('Test for broken links', async ({ browser }) => {
 
         //Set fail count
         var fails = 0;
-        var status400Error = 0;
-        var status300Error = 0;
+        var statusError = 0;
         var hrefFetchError = 0;
 
         //Error Handling
         function handleError(errorType) {
             if (errorType==1){
-                status400Error++;
-            }else if(errorType==2){
-                status300Error++;
+                statusError++;
             }else if(errorType==3){
                 hrefFetchError++;
             }
@@ -86,10 +108,16 @@ test('Test for broken links', async ({ browser }) => {
         function generateReport() {
             console.log(`Website Tested ${url}`);
             console.log("=====Report=====")
-            console.log(`Status 400: ${status400Error}\tStatus 300: ${status300Error}\tHref 300: ${hrefFetchError}`);
+            console.log(`Status Errors: ${statusError}\tHref: ${hrefFetchError}`);
             console.log(`Total Fails: ${fails}\tAttempts: ${links.length}\n\n\n`);
         }
 
+        function removeCommas(input) {
+            if (typeof input === 'string') {
+                return input.replace(/,/g, '');
+            }
+            return input;
+        }
 
         //For Each link
         for (let i = 0; i < links.length; i++) {
@@ -111,14 +139,13 @@ test('Test for broken links', async ({ browser }) => {
                             if (response.status >= 400) {
                                 const className = await link.getAttribute('class');
                                 const textContent = await link.textContent();
-                                status400Error ++;
-                                console.log(`ClassName:${className}\tContent:${textContent}\nLink ${href}: Status 400`);
+                                csvStream.write(`${url},Status 400,${removeCommas(textContent)},${removeCommas(className)},${href}\n`);
                                 handleError(1);
                             } else if (response.status >= 300) {
                                 const className = await link.getAttribute('class');
                                 const textContent = await link.textContent();
-                                console.log(`ClassName:${className}\tContent:${textContent}\nLink ${href}: Status 300`);
-                                handleError(2)
+                                csvStream.write(`${url},Status 300,${removeCommas(textContent)},${removeCommas(className)},${href}\n`);
+                                handleError(1);
                             }
                         } catch (error) {
                             //console.log(`An error occurred while checking link${href}: ${error.message}`);
@@ -131,14 +158,17 @@ test('Test for broken links', async ({ browser }) => {
                     handleError(3)
                 }
             } catch (error) {
-                // const className = await link.getAttribute('class');
-                // const textContent = await link.textContent();
+                const className = await link.getAttribute('class');
+                const textContent = await link.textContent();
+                csvStream.write(`${url},Href,${removeCommas(textContent)},${removeCommas(className)},Null\n`);
                 handleError(3)
             }
         }
         generateReport();
+        csvStream.write(`${url},Attempts: ${links.length},Total: ${fails}, Href: ${hrefFetchError}, Status: ${statusError}\n`)
         //Close Browser/Context
         await page.close();
         await context.close();
     }
+    csvStream.end();
 });
