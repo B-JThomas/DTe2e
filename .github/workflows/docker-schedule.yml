@@ -1,6 +1,9 @@
 name: Run Docker Container Daily
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 0 * * *'  # Runs every day at midnight UTC
 
@@ -16,7 +19,26 @@ jobs:
         uses: docker/setup-buildx-action@v1
       
       - name: Pull Docker image
-        run: docker pull yourusername/broken-link-checker:latest
+        run: docker pull baileydt/broken-link-checker:latest
       
       - name: Run Docker container
-        run: docker run --rm -v ${{ github.workspace }}/results:/app/results yourusername/broken-link-checker:latest
+        run: docker run --rm -v ${{ github.workspace }}/results:/app/results baileydt/broken-link-checker:latest
+
+      - name: Find latest results.csv
+        id: find-results
+        run: |
+          latest_file=$(ls -t ${GITHUB_WORKSPACE}/results/results*.csv | head -n1)
+          echo "::set-output name=filepath::${latest_file}"
+
+      - name: Email results
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Daily Broken Link Checker Results"
+          body: "Attached is the latest results of the broken link checker."
+          to: bailey@digitaltreasury.com.au
+          from: ${{ secrets.SMTP_USERNAME }}
+          attachments: ${{ steps.find-results.outputs.filepath }}
