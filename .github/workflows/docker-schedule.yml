@@ -1,4 +1,4 @@
-name: Run Docker Container Daily
+name: Run Docker Container and Upload Results
 
 on:
   push:
@@ -23,22 +23,15 @@ jobs:
       
       - name: Run Docker container
         run: docker run --rm -v ${{ github.workspace }}/results:/app/results baileydt/broken-link-checker:latest
-
-      - name: Find latest results.csv
-        id: find-results
+      
+      - name: Find latest results file
+        id: find-latest-file
         run: |
-          latest_file=$(ls -t ${GITHUB_WORKSPACE}/results/results*.csv | head -n1)
-          echo "::set-output name=filepath::${latest_file}"
-
-      # - name: Email results
-      #   uses: dawidd6/action-send-mail@v3
-      #   with:
-      #     server_address: smtp.gmail.com
-      #     server_port: 465
-      #     username: ${{ secrets.SMTP_USERNAME }}
-      #     password: ${{ secrets.SMTP_PASSWORD }}
-      #     subject: "Daily Broken Link Checker Results"
-      #     body: "Attached is the latest results of the broken link checker."
-      #     to: bailey@digitaltreasury.com.au
-      #     from: ${{ secrets.SMTP_USERNAME }}
-      #     attachments: ${{ steps.find-results.outputs.filepath }}
+          latest_file=$(ls -t ${{ github.workspace }}/results/results*.csv | head -n1)
+          echo "::set-output name=file::$latest_file"
+      
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: ${{ github.workspace }}/results/
