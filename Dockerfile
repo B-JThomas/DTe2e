@@ -42,7 +42,10 @@ RUN apt-get update \
         libnss3 \
         lsb-release \
         xdg-utils \
-        wget
+        wget \
+        curl \
+        gnupg \
+        openssh-client
 
 # Set the working directory inside the container
 WORKDIR /app
