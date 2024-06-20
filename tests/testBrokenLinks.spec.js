@@ -1,4 +1,3 @@
-const fs = require('fs');
 const { test } = require('@playwright/test');
 
 //change how long the test should run
@@ -6,23 +5,6 @@ const minutes = 30;
 
 const convertedTime = minutes*60000;
 test.setTimeout(convertedTime);
-
-function getNextFileName(directory, baseName, extension) {
-    const files = fs.readdirSync(directory);
-    let maxNumber = -1;
-
-    files.forEach(file => {
-        const match = file.match(new RegExp(`${baseName}(\\d+)\\.${extension}`));
-        if (match) {
-            const number = parseInt(match[1], 10);
-            if (number > maxNumber) {
-                maxNumber = number;
-            }
-        }
-    });
-
-    return `${baseName}${maxNumber + 1}.${extension}`;
-}
 
 test('Test for broken links', async ({ browser }) => {
     //All websites we want to test
@@ -69,13 +51,6 @@ test('Test for broken links', async ({ browser }) => {
         "https://universalbiosensors.com/",
         "https://vacl.org.au/"
     ]
-    const resultsDir = 'results';
-    if (!fs.existsSync(resultsDir)) {
-        fs.mkdirSync(resultsDir);
-    }
-
-    const csvFileName = getNextFileName(resultsDir, 'results', 'csv');
-    const csvStream = fs.createWriteStream(`${resultsDir}/${csvFileName}`);
 
     //For Each Website
     for (let i = 0; i < startUrl.length; i++) {
@@ -105,13 +80,6 @@ test('Test for broken links', async ({ browser }) => {
             fails++;
         }
 
-        function generateReport() {
-            console.log(`Website Tested ${url}`);
-            console.log("=====Report=====")
-            console.log(`Status Errors: ${statusError}\tHref: ${hrefFetchError}`);
-            console.log(`Total Fails: ${fails}\tAttempts: ${links.length}\n\n\n`);
-        }
-
         function removeCommas(input) {
             if (typeof input === 'string') {
                 return input.replace(/,/g, '');
@@ -139,33 +107,31 @@ test('Test for broken links', async ({ browser }) => {
                             if (response.status >= 400) {
                                 const className = await link.getAttribute('class');
                                 const textContent = await link.textContent();
-                                csvStream.write(`${url},Status 400,${removeCommas(textContent)},${removeCommas(className)},${href}\n`);
+                                console.log(`${url},Status 400,${removeCommas(textContent)},${removeCommas(className)},${href}`);
                                 handleError(1);
                             } else if (response.status >= 300) {
                                 const className = await link.getAttribute('class');
                                 const textContent = await link.textContent();
-                                csvStream.write(`${url},Status 300,${removeCommas(textContent)},${removeCommas(className)},${href}\n`);
+                                console.log(`${url},Status 300,${removeCommas(textContent)},${removeCommas(className)},${href}`);
                                 handleError(1);
                             }
                         } catch (error) {
-                            //console.log(`An error occurred while checking link${href}: ${error.message}`);
                             handleError(3)
                         }
                     }
                 }
                 else {
-                    //console.log(`ClassName:${response.class}\tContent:${response.content}\nhref:${href}, has an invalid href attribute`);
                     handleError(3)
                 }
             } catch (error) {
                 const className = await link.getAttribute('class');
                 const textContent = await link.textContent();
-                csvStream.write(`${url},Href,${removeCommas(textContent)},${removeCommas(className)},Null\n`);
+                console.log(`${url},Href,${removeCommas(textContent)},${removeCommas(className)},Null`);
                 handleError(3)
             }
         }
-        generateReport();
-        csvStream.write(`${url},Attempts: ${links.length},Total: ${fails}, Href: ${hrefFetchError}, Status: ${statusError}\n`)
+
+        console.log(`${url},Attempts: ${links.length},Total: ${fails}, Href: ${hrefFetchError}, Status: ${statusError}`)
         //Close Browser/Context
         await page.close();
         await context.close();
