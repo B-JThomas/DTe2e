@@ -2,8 +2,8 @@ name: Playwright Tests
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * *'
 jobs:
   test:
     timeout-minutes: 60
@@ -17,8 +17,8 @@ jobs:
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test testBrokenLinks.spec.js
+    - name: Run Playwright tests and capture output
+      run: npx playwright test testBrokenLinks.spec.js > playwright-output.log
     - uses: actions/upload-artifact@v4
       if: always()
       with:
